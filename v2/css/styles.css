@@ -1,0 +1,398 @@
+:root {
+    --primary-color: #2563eb;
+    --secondary-color: #1e40af;
+    --accent-color: #f59e0b;
+    --danger-color: #ef4444;
+    --success-color: #10b981;
+    --bg-color: #f3f4f6;
+    --text-color: #1f2937;
+    --card-bg: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+}
+
+/* Layout */
+#app {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+/* Left Column: Product Grid */
+.product-section {
+    flex: 2;
+    padding: 20px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    align-content: start;
+}
+
+.product-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    height: 180px;
+    user-select: none;
+    border: 2px solid transparent;
+}
+
+.product-card:active {
+    transform: scale(0.95);
+}
+
+.product-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+}
+
+.product-icon {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.product-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.product-price {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1.2rem;
+}
+
+/* Right Column: Ticket & Actions */
+.sidebar {
+    flex: 1;
+    background: var(--card-bg);
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid #e5e7eb;
+    max-width: 450px;
+    min-width: 350px;
+    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-header {
+    padding: 20px;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-header h2 {
+    font-size: 1.2rem;
+}
+
+.ticket-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.ticket-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #f3f4f6;
+    animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.item-info {
+    flex: 1;
+}
+
+.item-name {
+    font-weight: 600;
+    display: block;
+}
+
+.item-price {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.item-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-remove {
+    color: var(--danger-color);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    font-size: 1.2rem;
+    margin-left: 5px;
+}
+
+.btn-qty {
+    background: #e5e7eb;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    transition: background 0.2s;
+}
+
+.btn-qty:hover {
+    background: #d1d5db;
+}
+
+.qty-badge {
+    background: var(--bg-color);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+    min-width: 35px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid #e5e7eb;
+    margin: 0 5px;
+}
+
+.qty-badge:hover {
+    background: white;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.summary-section {
+    padding: 20px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    color: var(--text-color);
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.btn {
+    border: none;
+    padding: 15px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.btn:active {
+    opacity: 0.8;
+}
+
+.btn-pay {
+    background: var(--success-color);
+    color: white;
+    grid-column: span 2;
+    font-size: 1.2rem;
+}
+
+.btn-cancel {
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-admin {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-small {
+    background: none;
+    border: 1px solid #d1d5db;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #6b7280;
+    cursor: pointer;
+}
+
+.btn-small:hover {
+    background: #f3f4f6;
+    color: var(--text-color);
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.payment-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.btn-payment {
+    background: var(--primary-color);
+    color: white;
+    padding: 20px;
+    font-size: 1.1rem;
+}
+
+.btn-close-modal {
+    margin-top: 20px;
+    background: transparent;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+/* Print Styles */
+#print-area {
+    display: none;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #print-area,
+    #print-area * {
+        visibility: visible;
+    }
+
+    #print-area {
+        display: block;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        /* 80mm thermal paper width */
+        padding: 0;
+        margin: 0;
+        font-family: 'Courier New', Courier, monospace;
+        /* Monospace for receipt look */
+        font-size: 12px;
+        color: black;
+        background: white;
+    }
+
+    .print-header {
+        text-align: center;
+        margin-bottom: 15px;
+        border-bottom: 1px dashed black;
+        padding-bottom: 10px;
+    }
+
+    .print-title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .print-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+
+    .print-divider {
+        border-top: 1px dashed black;
+        margin: 10px 0;
+    }
+
+    .print-total {
+        font-size: 16px;
+        font-weight: bold;
+        text-align: right;
+        margin-top: 10px;
+    }
+
+    .print-footer {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 10px;
+    }
+}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Feria Gastronómica</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <div id="app">
+        <!-- Left Column: Products -->
+        <main class="product-section" id="product-grid">
+            <!-- Products will be injected here by JS -->
+        </main>
+
+        <!-- Right Column: Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Orden Actual</h2>
+                <span id="clock">00:00</span>
+            </div>
+
+            <div class="ticket-container" id="cart-container">
+                <!-- Cart items will be injected here -->
+                <div style="text-align: center; padding: 40px; color: #9ca3af;">
+                    <p>Selecciona productos para agregar</p>
+                </div>
+            </div>
+
+            <div class="summary-section">
+                <div class="total-row">
+                    <span>Total</span>
+                    <span id="total-display">$0</span>
+                </div>
+                <div class="action-grid">
+                    <button class="btn btn-cancel" onclick="clearCart()">
+                        <span>🗑️ Cancelar</span>
+                    </button>
+                    <button class="btn btn-admin" onclick="downloadDailyReport()">
+                        <span>📊 Cierre (Excel)</span>
+                    </button>
+                    <button class="btn btn-pay" onclick="openPaymentModal()">
+                        <span>💳 Cobrar e Imprimir</span>
+                    </button>
+                </div>
+
+                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                    <button class="btn-small" onclick="downloadBackup()" title="Descargar copia de seguridad completa">
+                        💾 Respaldo
+                    </button>
+                    <button class="btn-small" onclick="document.getElementById('restore-input').click()"
+                        title="Restaurar datos desde archivo">
+                        📂 Restaurar
+                    </button>
+                    <input type="file" id="restore-input" style="display: none" onchange="restoreBackup(this)"
+                        accept=".json">
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal-overlay" id="payment-modal">
+        <div class="modal-content">
+            <h2>Seleccionar Método de Pago</h2>
+            <p>Total a cobrar: <strong id="modal-total">$0</strong></p>
+            <div class="payment-options">
+                <button class="btn btn-payment" onclick="processPayment('Efectivo')">
+                    💵 Efectivo
+                </button>
+                <button class="btn btn-payment" onclick="processPayment('Datáfono Bold')">
+                    💳 Datáfono Bold
+                </button>
+            </div>
+            <button class="btn btn-close-modal" onclick="closePaymentModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Print Area (Hidden on screen) -->
+    <div id="print-area">
+        <!-- Receipt content injected here -->
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>

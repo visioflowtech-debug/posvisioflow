@@ -31,13 +31,34 @@ export default function Team() {
 
     const fetchMembers = async () => {
         try {
-            // Fetch team members and join with profiles to get email
-            const { data, error } = await supabase
+            // 1. Fetch team members
+            const { data: membersData, error: membersError } = await supabase
                 .from('team_members')
-                .select('*, profile:profiles!team_members_user_id_fkey(email, business_name)');
+                .select('*');
 
-            if (error) throw error;
-            setMembers(data || []);
+            if (membersError) throw membersError;
+
+            if (!membersData || membersData.length === 0) {
+                setMembers([]);
+                return;
+            }
+
+            // 2. Fetch profiles for these users manually to avoid FK issues
+            const userIds = membersData.map(m => m.user_id);
+            const { data: profilesData, error: profilesError } = await supabase
+                .from('profiles')
+                .select('id, email, business_name')
+                .in('id', userIds);
+
+            if (profilesError) throw profilesError;
+
+            // 3. Merge data
+            const validMembers = membersData.map(member => ({
+                ...member,
+                profile: profilesData?.find(p => p.id === member.user_id)
+            }));
+
+            setMembers(validMembers);
         } catch (error) {
             console.error('Error fetching members:', error);
             showToast('Error al cargar miembros', 'error');
@@ -52,42 +73,68 @@ export default function Team() {
         setProcessing(true);
 
         try {
-            // 1. Find user by email
+            // 1. Try to find user by email
             const { data: users, error: userError } = await supabase
                 .from('profiles')
                 .select('id')
                 .eq('email', email)
                 .single();
 
-            if (userError || !users) {
-                showToast('Usuario no encontrado. Asegúrate de que se haya registrado en la aplicación.', 'error');
-                return;
-            }
+            const currentUser = (await supabase.auth.getUser()).data.user;
 
-            // 2. Add to team
-            const { error: inviteError } = await supabase
-                .from('team_members')
-                .insert([{
-                    user_id: users.id,
-                    owner_id: (await supabase.auth.getUser()).data.user?.id,
-                    role,
-                    status: 'active'
-                }]);
+            // CASE A: User exists -> Add directly to Team
+            if (users && !userError) {
+                const { error: inviteError } = await supabase
+                    .from('team_members')
+                    .insert([{
+                        user_id: users.id,
+                        owner_id: currentUser?.id,
+                        role,
+                        status: 'active'
+                    }]);
 
-            if (inviteError) {
-                if (inviteError.code === '23505') { // Duplicate key error
-                    showToast('Este usuario ya es miembro del equipo.', 'info');
-                    return;
+                if (inviteError) {
+                    if (inviteError.code === '23505') {
+                        showToast('Este usuario ya es miembro del equipo.', 'info');
+                    } else {
+                        throw inviteError;
+                    }
+                } else {
+                    showToast('Miembro agregado exitosamente.', 'success');
                 }
-                throw inviteError;
             }
 
-            showToast('Miembro agregado exitosamente.', 'success');
+            // CASE B: User does NOT exist -> Create Invitation
+            else {
+                // Check if already invited
+                const { data: existingInvite } = await supabase
+                    .from('team_invitations')
+                    .select('id')
+                    .eq('email', email)
+                    .eq('owner_id', currentUser?.id)
+                    .single();
+
+                if (existingInvite) {
+                    showToast('Ya has enviado una invitación a este correo.', 'info');
+                } else {
+                    const { error: invitError } = await supabase
+                        .from('team_invitations')
+                        .insert([{
+                            email,
+                            owner_id: currentUser?.id,
+                            role
+                        }]);
+
+                    if (invitError) throw invitError;
+                    showToast(`Invitación enviada a ${email}. Se unirá automáticamente al registrarse.`, 'success');
+                }
+            }
+
             setEmail('');
             fetchMembers();
         } catch (error: any) {
             console.error('Error inviting member:', error);
-            showToast(`Error al agregar miembro: ${error.message}`, 'error');
+            showToast(`Error: ${error.message}`, 'error');
         } finally {
             setProcessing(false);
         }
@@ -176,7 +223,7 @@ export default function Team() {
                                     {members.map((member) => (
                                         <div key={member.id} className="p-4 flex justify-between items-center hover:bg-gray-50">
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-full ${member.role === 'admin' ? 'bg-purple-100' : 'bg-blue-100'}`}>
+                                                <div className={`p - 2 rounded - full ${member.role === 'admin' ? 'bg-purple-100' : 'bg-blue-100'}`}>
                                                     {member.role === 'admin' ? <Shield className="w-5 h-5 text-purple-600" /> : <User className="w-5 h-5 text-blue-600" />}
                                                 </div>
                                                 <div>

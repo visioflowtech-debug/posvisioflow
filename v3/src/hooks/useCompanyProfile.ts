@@ -10,12 +10,14 @@ export interface CompanyProfile {
     logo_url?: string;
 }
 
-export type UserRole = 'owner' | 'admin' | 'cashier';
+export type UserRole = 'owner' | 'admin' | 'cashier' | 'super_admin';
 
 export function useCompanyProfile() {
     const [profile, setProfile] = useState<CompanyProfile | null>(null);
     const [role, setRole] = useState<UserRole>('owner'); // Default to owner until checked
     const [loading, setLoading] = useState(true);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [isSuspended, setIsSuspended] = useState(false);
 
     useEffect(() => {
         fetchProfile();
@@ -25,6 +27,29 @@ export function useCompanyProfile() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
+
+            // 0. Check Personal Profile for Super Admin & Status
+            const { data: myProfile, error: myProfileError } = await supabase
+                .from('profiles')
+                .select('is_super_admin, status')
+                .eq('id', user.id)
+                .single();
+
+            console.log('My Profile Check:', { myProfile, myProfileError });
+
+            if (myProfile?.status === 'suspended') {
+                setIsSuspended(true);
+                setLoading(false);
+                return; // Stop loading if suspended
+            }
+
+            if (myProfile?.is_super_admin) {
+                console.log('Super Admin detected!');
+                setIsSuperAdmin(true);
+                setRole('super_admin');
+                setLoading(false);
+                return; // Super admin doesn't need company profile logic for now
+            }
 
             // 1. Check if user is a team member
             const { data: teamMember } = await supabase
@@ -47,11 +72,17 @@ export function useCompanyProfile() {
             // 2. Fetch Company Profile (Owner's profile)
             const { data, error } = await supabase
                 .from('profiles')
-                .select('business_name, address, phone, tax_id, currency, logo_url')
+                .select('business_name, address, phone, tax_id, currency, logo_url, status')
                 .eq('id', targetUserId)
                 .single();
 
             if (error) throw error;
+
+            // Also check if the COMPANY is suspended (if I am an employee)
+            if (data.status === 'suspended') {
+                setIsSuspended(true);
+            }
+
             setProfile(data);
         } catch (error) {
             console.error('Error fetching company profile:', error);
@@ -60,5 +91,5 @@ export function useCompanyProfile() {
         }
     };
 
-    return { profile, role, loading, refetch: fetchProfile };
+    return { profile, role, loading, isSuperAdmin, isSuspended, refetch: fetchProfile };
 }

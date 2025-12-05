@@ -1,0 +1,22 @@
+-- ==============================================================================
+-- CLEANUP SCRIPT: Fix "Everyone is Super Admin"
+-- Purpose: You accidentally made everyone a Super Admin. This script fixes it.
+-- ==============================================================================
+
+-- 1. Revoke Super Admin from EVERYONE first
+UPDATE public.profiles
+SET is_super_admin = false;
+
+-- 2. Grant Super Admin ONLY to YOU
+-- CAMBIA 'tucorreo@gmail.com' POR TU EMAIL REAL ABAJO:
+UPDATE public.profiles
+SET is_super_admin = true
+FROM auth.users
+WHERE public.profiles.id = auth.users.id
+AND auth.users.email = 'visioflow.tech@gmail.com'; -- <--- EDITA ESTO
+
+-- 3. Verify (Optional, just for you to see output in SQL Editor)
+SELECT auth.users.email, profiles.is_super_admin 
+FROM profiles 
+JOIN auth.users ON profiles.id = auth.users.id
+WHERE profiles.is_super_admin = true;

@@ -12,6 +12,7 @@ import {
     AlertTriangle,
     DollarSign,
     LogOut,
+    User,
     Banknote,
     CreditCard
 } from 'lucide-react';
@@ -101,13 +102,22 @@ export default function Dashboard() {
                         </h1>
                         <p className="text-gray-500">Resumen de actividad</p>
                     </div>
-                    <button
-                        onClick={() => supabase.auth.signOut()}
-                        className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-                    >
-                        <LogOut className="w-4 h-4" />
-                        Cerrar Sesión
-                    </button>
+                    <div className="flex gap-3">
+                        <Link
+                            to="/profile"
+                            className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                        >
+                            <User className="w-4 h-4" />
+                            Mi Perfil
+                        </Link>
+                        <button
+                            onClick={() => supabase.auth.signOut()}
+                            className="flex items-center gap-2 bg-gray-900 border border-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 font-medium transition-colors"
+                        >
+                            <LogOut className="w-4 h-4" />
+                            Salir
+                        </button>
+                    </div>
                 </div>
 
                 {/* KPI Cards */}

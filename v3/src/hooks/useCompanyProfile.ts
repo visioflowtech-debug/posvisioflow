@@ -35,20 +35,17 @@ export function useCompanyProfile() {
                 .eq('id', user.id)
                 .single();
 
-            console.log('My Profile Check:', { myProfile, myProfileError });
-
             if (myProfile?.status === 'suspended') {
                 setIsSuspended(true);
                 setLoading(false);
-                return; // Stop loading if suspended
+                return;
             }
 
             if (myProfile?.is_super_admin) {
-                console.log('Super Admin detected!');
                 setIsSuperAdmin(true);
                 setRole('super_admin');
                 setLoading(false);
-                return; // Super admin doesn't need company profile logic for now
+                return;
             }
 
             // 1. Check if user is a team member

@@ -47,7 +47,7 @@ export default function Team() {
             const userIds = membersData.map(m => m.user_id);
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('id, business_name')
+                .select('id, email, business_name')
                 .in('id', userIds);
 
             if (profilesError) throw profilesError;

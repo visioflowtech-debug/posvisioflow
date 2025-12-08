@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 interface Profile {
     id: string;
     business_name: string;
+    full_name: string;
     email: string;
     status: 'active' | 'suspended';
     is_super_admin: boolean;
@@ -130,7 +131,10 @@ export default function SuperAdmin() {
                             ) : filteredProfiles.map((p) => (
                                 <tr key={p.id} className="hover:bg-gray-700/50 transition-colors">
                                     <td className="p-4">
-                                        <div className="font-bold text-white">{p.business_name || 'Sin Nombre'}</div>
+                                        <div className="font-bold text-white">
+                                            {p.business_name || p.full_name || 'Sin Nombre'}
+                                            {(p.business_name && p.full_name) && <span className="text-gray-400 font-normal"> ({p.full_name})</span>}
+                                        </div>
                                         <div className="text-sm text-gray-400">{p.email || 'Sin Email'}</div>
                                         <div className="text-xs text-gray-500 font-mono">{p.id}</div>
                                     </td>

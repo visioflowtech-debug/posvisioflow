@@ -11,6 +11,7 @@ interface TeamMember {
     status: string;
     profile?: {
         email: string;
+        full_name?: string;
         business_name: string;
     };
 }
@@ -47,7 +48,7 @@ export default function Team() {
             const userIds = membersData.map(m => m.user_id);
             const { data: profilesData, error: profilesError } = await supabase
                 .from('profiles')
-                .select('id, email, business_name')
+                .select('id, email, full_name, business_name')
                 .in('id', userIds);
 
             if (profilesError) throw profilesError;
@@ -227,7 +228,9 @@ export default function Team() {
                                                     {member.role === 'admin' ? <Shield className="w-5 h-5 text-purple-600" /> : <User className="w-5 h-5 text-blue-600" />}
                                                 </div>
                                                 <div>
-                                                    <p className="font-medium text-gray-900">{member.profile?.email || 'Usuario desconocido'}</p>
+                                                    <p className="font-medium text-gray-900">
+                                                        {member.profile?.full_name || member.profile?.email || 'Usuario desconocido'}
+                                                    </p>
                                                     <p className="text-xs text-gray-500 capitalize">{member.role === 'admin' ? 'Administrador' : 'Cajero'}</p>
                                                 </div>
                                             </div>

@@ -33,7 +33,7 @@ export function useCompanyProfile() {
                 .from('profiles')
                 .select('is_super_admin, status')
                 .eq('id', user.id)
-                .single();
+                .maybeSingle();
 
             if (myProfile?.status === 'suspended') {
                 setIsSuspended(true);
@@ -71,9 +71,16 @@ export function useCompanyProfile() {
                 .from('profiles')
                 .select('business_name, address, phone, tax_id, currency, logo_url, status')
                 .eq('id', targetUserId)
-                .single();
+                .maybeSingle();
 
             if (error) throw error;
+
+            if (!data) {
+                // Handle case where profile doesn't exist
+                console.warn('Profile not found for user:', targetUserId);
+                setLoading(false);
+                return;
+            }
 
             // Also check if the COMPANY is suspended (if I am an employee)
             if (data.status === 'suspended') {

@@ -1,0 +1,19 @@
+-- Run this in your Supabase SQL Editor to create your profile
+INSERT INTO public.profiles (
+    id,
+    business_name,
+    email,
+    full_name,
+    status,
+    is_super_admin
+) 
+VALUES (
+    'bc188fab-e0a2-4ff6-bbe3-a312a5e4a2f7', -- Your User ID
+    'Mi Empresa',
+    'usuario@ejemplo.com', -- Update if you know the email, otherwise this is a placeholder
+    'Admin User',
+    'active',
+    true -- Setting as super admin for safety, can be changed later
+)
+ON CONFLICT (id) DO UPDATE 
+SET status = 'active';

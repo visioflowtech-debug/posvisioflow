@@ -1,0 +1,83 @@
+-- ==============================================================================
+-- FIX RECURSION V3: DYNAMIC CLEANUP (NUCLEAR OPTION)
+-- This script finds and drops ALL policies on specific tables to guarantee a clean slate.
+-- ==============================================================================
+
+DO $$
+DECLARE
+    pol record;
+BEGIN
+    -- 1. Loop through all policies for 'profiles' and drop them
+    FOR pol IN 
+        SELECT policyname 
+        FROM pg_policies 
+        WHERE tablename = 'profiles' 
+        AND schemaname = 'public'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.profiles', pol.policyname);
+        RAISE NOTICE 'Dropped policy: % on profiles', pol.policyname;
+    END LOOP;
+
+    -- 2. Loop through all policies for 'team_members' and drop them (just in case)
+    FOR pol IN 
+        SELECT policyname 
+        FROM pg_policies 
+        WHERE tablename = 'team_members' 
+        AND schemaname = 'public'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.team_members', pol.policyname);
+        RAISE NOTICE 'Dropped policy: % on team_members', pol.policyname;
+    END LOOP;
+END $$;
+
+-- ==============================================================================
+-- RE-APPLY SECURE LOGIC
+-- ==============================================================================
+
+-- 3. Hardened Security Function
+CREATE OR REPLACE FUNCTION public.check_is_super_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  -- Direct check avoiding RLS entanglement
+  RETURN EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE id = auth.uid() 
+    AND is_super_admin = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 4. Re-apply Clean Policies on PROFILES
+
+-- Allow users to view their own profile OR if they are super admin
+CREATE POLICY "Profiles viewable by users or admins" ON profiles
+  FOR SELECT USING (
+    auth.uid() = id OR check_is_super_admin() = true
+  );
+
+-- Allow users to update their own profile OR if they are super admin
+CREATE POLICY "Profiles updatable by users or admins" ON profiles
+  FOR UPDATE USING (
+    auth.uid() = id OR check_is_super_admin() = true
+  );
+
+-- Allow users to insert their own profile (standard for auth)
+CREATE POLICY "Profiles insertable by self" ON profiles
+  FOR INSERT WITH CHECK (
+    auth.uid() = id
+  );
+
+-- 5. Re-apply Clean Policies on TEAM_MEMBERS
+CREATE POLICY "View team members" ON team_members
+  FOR SELECT USING (
+    owner_id = auth.uid() OR user_id = auth.uid() OR check_is_super_admin() = true
+  );
+
+CREATE POLICY "Manage team members" ON team_members
+  FOR ALL USING (
+    owner_id = auth.uid() OR check_is_super_admin() = true
+  );
+
+-- Ensure RLS is enabled
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;

@@ -16,7 +16,7 @@ import Expenses from './pages/Expenses';
 import FinancialReports from './pages/FinancialReports';
 import Team from './pages/Team';
 import SuperAdmin from './pages/SuperAdmin';
-import { Loader2, Ban } from 'lucide-react';
+import { Loader2, Ban, AlertTriangle } from 'lucide-react';
 import { ToastProvider } from './context/ToastContext';
 
 import { useCompanyProfile, type UserRole } from './hooks/useCompanyProfile';
@@ -24,7 +24,7 @@ import { useCompanyProfile, type UserRole } from './hooks/useCompanyProfile';
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: UserRole[] }) {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { role, loading: roleLoading, isSuperAdmin, isSuspended } = useCompanyProfile();
+  const { profile, role, loading: roleLoading, isSuperAdmin, isSuspended } = useCompanyProfile();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -51,6 +51,29 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
 
   if (!session) {
     return <Navigate to="/login" />;
+  }
+
+
+  // Missing Profile Check
+  if (!profile && !roleLoading && !loading && !isSuperAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 text-center">
+        <div className="bg-yellow-100 p-4 rounded-full mb-4">
+          <AlertTriangle className="w-12 h-12 text-yellow-600" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Perfil No Encontrado</h1>
+        <p className="text-gray-600 mb-8 max-w-md">
+          No se encontró información de perfil para tu usuario.
+          Por favor contacta a soporte o al administrador del sistema.
+        </p>
+        <button
+          onClick={() => supabase.auth.signOut()}
+          className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+        >
+          Cerrar Sesión
+        </button>
+      </div>
+    );
   }
 
   // Suspended Check

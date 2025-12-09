@@ -1,0 +1,36 @@
+-- ==============================================================================
+-- DEBUG RELIEF SCRIPT (IDEMPOTENT V2)
+-- This script simplifies policies to identify/fix the recursion loop.
+-- ==============================================================================
+
+-- 1. PROFILES: Wipe old policies and debug policies, then recreate simplified
+DROP POLICY IF EXISTS "Profiles view/edit owner or admin" ON public.profiles;
+DROP POLICY IF EXISTS "Profiles insert self" ON public.profiles;
+DROP POLICY IF EXISTS "Profiles Owner Only" ON public.profiles; -- Added safety check
+
+-- Create a simplified policy (Owner only)
+CREATE POLICY "Profiles Owner Only" ON public.profiles
+FOR ALL USING (auth.uid() = id);
+
+-- 2. TEAM MEMBERS: Wipe old and debug, then recreate simplified
+DROP POLICY IF EXISTS "Team viewable by involved" ON public.team_members;
+DROP POLICY IF EXISTS "Team managed by owner/admin" ON public.team_members;
+DROP POLICY IF EXISTS "Team Involved Only" ON public.team_members; -- Added safety check
+DROP POLICY IF EXISTS "Team Owner Managed" ON public.team_members; -- Added safety check
+
+-- Simplified Team Policy
+CREATE POLICY "Team Involved Only" ON public.team_members
+FOR SELECT USING (owner_id = auth.uid() OR user_id = auth.uid());
+
+CREATE POLICY "Team Owner Managed" ON public.team_members
+FOR ALL USING (owner_id = auth.uid());
+
+-- 3. PRODUCTS: Wipe and recreate simplified
+DROP POLICY IF EXISTS "Products managed by admins" ON public.products;
+DROP POLICY IF EXISTS "Products managed by auth" ON public.products; -- Added safety check
+
+CREATE POLICY "Products managed by auth" ON public.products
+FOR ALL USING (auth.role() = 'authenticated');
+
+-- 4. FORCE REFRESH SCHEMA CACHE
+NOTIFY pgrst, 'reload schema';

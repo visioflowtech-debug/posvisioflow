@@ -1,0 +1,64 @@
+-- ==============================================================================
+-- FIX RECURSION V2: AGGRESSIVE CLEANUP
+-- ==============================================================================
+
+-- 1. Drop ALL potential conflicting policies on 'profiles'
+-- We try to guess common names used in previous versions
+DROP POLICY IF EXISTS "Super Admins can view all profiles" ON profiles;
+DROP POLICY IF EXISTS "Super Admins can update any profile" ON profiles;
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Enable read access for all users" ON profiles;
+DROP POLICY IF EXISTS "Enable insert for authenticated users only" ON profiles;
+DROP POLICY IF EXISTS "Enable update for users based on email" ON profiles;
+
+-- 2. Drop policies on 'team_members' just in case of cross-table recursion
+DROP POLICY IF EXISTS "View team members" ON team_members;
+DROP POLICY IF EXISTS "Manage team members" ON team_members;
+DROP POLICY IF EXISTS "Enable read access for internal users" ON team_members;
+
+-- 3. Hardened Security Function
+-- We set search_path to public to prevent any hijacking
+CREATE OR REPLACE FUNCTION public.check_is_super_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  -- Direct check avoiding RLS entanglement
+  RETURN EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE id = auth.uid() 
+    AND is_super_admin = true
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- 4. Re-apply Clean Policies on PROFILES
+
+-- Allow users to view their own profile OR if they are super admin
+CREATE POLICY "Profiles viewable by users or admins" ON profiles
+  FOR SELECT USING (
+    auth.uid() = id OR check_is_super_admin() = true
+  );
+
+-- Allow users to update their own profile OR if they are super admin
+CREATE POLICY "Profiles updatable by users or admins" ON profiles
+  FOR UPDATE USING (
+    auth.uid() = id OR check_is_super_admin() = true
+  );
+
+-- Allow users to insert their own profile (standard for auth)
+CREATE POLICY "Profiles insertable by self" ON profiles
+  FOR INSERT WITH CHECK (
+    auth.uid() = id
+  );
+
+-- 5. Re-apply Clean Policies on TEAM_MEMBERS
+CREATE POLICY "View team members" ON team_members
+  FOR SELECT USING (
+    owner_id = auth.uid() OR user_id = auth.uid() OR check_is_super_admin() = true
+  );
+
+CREATE POLICY "Manage team members" ON team_members
+  FOR ALL USING (
+    owner_id = auth.uid() OR check_is_super_admin() = true
+  );

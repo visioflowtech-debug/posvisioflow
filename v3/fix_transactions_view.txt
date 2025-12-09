@@ -1,0 +1,23 @@
+-- Fix for "Security Definer View" error
+-- This recreates the view with security_invoker=on to respect RLS policies
+
+DROP VIEW IF EXISTS public.transactions;
+
+CREATE OR REPLACE VIEW public.transactions WITH (security_invoker = on) AS
+SELECT
+    id::text as id,
+    'income' as type,
+    total as amount,
+    'Venta #' || id as description,
+    created_at as date,
+    'sale' as reference_type
+FROM public.sales
+UNION ALL
+SELECT
+    id::text as id,
+    'expense' as type,
+    amount,
+    description,
+    date,
+    'expense' as reference_type
+FROM public.expenses;

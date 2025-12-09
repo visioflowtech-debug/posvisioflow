@@ -1,0 +1,102 @@
+-- ==============================================================================
+-- FIX RECURSION V4: BREAK THE CYCLE (SCHEMA CHANGE)
+-- ==============================================================================
+
+-- 1. CLEANUP OLD POLICIES (Dynamic Drop to be safe)
+DO $$
+DECLARE
+    pol record;
+BEGIN
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'profiles' AND schemaname = 'public' LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.profiles', pol.policyname);
+    END LOOP;
+    FOR pol IN SELECT policyname FROM pg_policies WHERE tablename = 'team_members' AND schemaname = 'public' LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON public.team_members', pol.policyname);
+    END LOOP;
+END $$;
+
+-- 2. CREATE NEW TABLE FOR SUPER ADMINS
+-- This physically breaks the recursion: profiles -> check_admin -> super_admins (NO LOOP)
+CREATE TABLE IF NOT EXISTS public.super_admins (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS on the new table (but keep it simple)
+ALTER TABLE public.super_admins ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Super admins visible to everyone" ON public.super_admins
+    FOR SELECT USING (true); -- Publicly visible list of who is admin (needed for the check)
+
+-- Only service role can insert/delete manually for now, or via triggers
+CREATE POLICY "Super admins managed by service_role" ON public.super_admins
+    FOR ALL USING (auth.role() = 'service_role');
+
+
+-- 3. MIGRATE EXISTING DATA
+-- Copy anyone who is currently marked as is_super_admin in profiles
+INSERT INTO public.super_admins (user_id)
+SELECT id FROM public.profiles WHERE is_super_admin = true
+ON CONFLICT (user_id) DO NOTHING;
+
+
+-- 4. SYNC TRIGGER (Keep profiles.is_super_admin in sync with this table)
+-- This ensures your existing app code (which checks profiles.is_super_admin) still works.
+
+-- Trigger A: When profiles.is_super_admin is updated -> Update super_admins table
+CREATE OR REPLACE FUNCTION public.sync_super_admin_from_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_super_admin = true THEN
+        INSERT INTO public.super_admins (user_id) VALUES (NEW.id) ON CONFLICT DO NOTHING;
+    ELSE
+        DELETE FROM public.super_admins WHERE user_id = NEW.id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_profile_admin_change ON profiles;
+CREATE TRIGGER on_profile_admin_change
+AFTER UPDATE OF is_super_admin OR INSERT ON profiles
+FOR EACH ROW EXECUTE FUNCTION public.sync_super_admin_from_profile();
+
+
+-- 5. UPDATE SECURITY FUNCTION ( The Magic Fix )
+-- Now we check the TABLE, not the profile, breaking the loop.
+CREATE OR REPLACE FUNCTION public.check_is_super_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.super_admins WHERE user_id = auth.uid()
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+
+-- 6. RE-APPLY POLICIES (Standard & Clean)
+
+-- Profiles
+CREATE POLICY "Profiles viewable by users or admins" ON profiles
+  FOR SELECT USING (
+    auth.uid() = id OR check_is_super_admin() = true
+  );
+
+CREATE POLICY "Profiles updatable by users or admins" ON profiles
+  FOR UPDATE USING (
+    auth.uid() = id OR check_is_super_admin() = true
+  );
+
+CREATE POLICY "Profiles insertable by self" ON profiles
+  FOR INSERT WITH CHECK ( auth.uid() = id );
+
+-- Team Members
+CREATE POLICY "View team members" ON team_members
+  FOR SELECT USING (
+    owner_id = auth.uid() OR user_id = auth.uid() OR check_is_super_admin() = true
+  );
+
+CREATE POLICY "Manage team members" ON team_members
+  FOR ALL USING (
+    owner_id = auth.uid() OR check_is_super_admin() = true
+  );

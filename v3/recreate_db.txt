@@ -149,7 +149,7 @@ CREATE TABLE public.team_invitations (
 );
 
 -- 3. CREATE VIEW FOR TRANSACTIONS
-CREATE OR REPLACE VIEW public.transactions AS
+CREATE OR REPLACE VIEW public.transactions WITH (security_invoker = on) AS
 SELECT
     id::text as id,
     'income' as type,
@@ -175,8 +175,11 @@ FROM public.expenses;
 CREATE OR REPLACE FUNCTION public.check_is_super_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
+    -- This runs with owner privileges, bypassing RLS for this specific check
     RETURN EXISTS (
-        SELECT 1 FROM public.super_admins WHERE user_id = auth.uid()
+        SELECT 1 FROM public.profiles 
+        WHERE id = auth.uid() 
+        AND is_super_admin = true
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
@@ -192,7 +195,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER on_profile_admin_change
 AFTER UPDATE OF is_super_admin OR INSERT ON profiles
@@ -206,7 +209,7 @@ BEGIN
   VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -241,7 +244,7 @@ BEGIN
         WHERE id = (v_item->>'product_id')::BIGINT;
     END LOOP;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 
 -- 5. ROW LEVEL SECURITY
@@ -265,8 +268,21 @@ CREATE POLICY "Super admins public read" ON super_admins FOR SELECT USING (true)
 CREATE POLICY "Super admins service write" ON super_admins FOR ALL USING (auth.role() = 'service_role');
 
 -- PROFILES
+-- PROFILES
 CREATE POLICY "Profiles view/edit owner or admin" ON profiles
   FOR ALL USING (auth.uid() = id OR check_is_super_admin() = true);
+
+-- Re-create Policy using the Function (Fixing Recursion)
+CREATE POLICY "Super Admins can view all profiles" ON profiles
+  FOR SELECT USING (
+    check_is_super_admin() = true
+  );
+
+CREATE POLICY "Super Admins can update any profile" ON profiles
+  FOR UPDATE USING (
+    check_is_super_admin() = true
+  );
+
 CREATE POLICY "Profiles insert self" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 

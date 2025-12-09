@@ -29,7 +29,7 @@ export function useCompanyProfile() {
             if (!user) return;
 
             // 0. Check Personal Profile for Super Admin & Status
-            const { data: myProfile, error: myProfileError } = await supabase
+            const { data: myProfile } = await supabase
                 .from('profiles')
                 .select('is_super_admin, status')
                 .eq('id', user.id)

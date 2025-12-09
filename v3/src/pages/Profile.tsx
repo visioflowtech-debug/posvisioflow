@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { useCompanyProfile } from '../hooks/useCompanyProfile';
+
 import { useToast } from '../context/ToastContext';
-import { User, Lock, Save, Loader2, Building, Mail, Shield, ArrowLeft } from 'lucide-react';
+import { User, Lock, Save, Loader2, Mail, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Profile() {
-    const { profile: companyProfile, role, loading: profileLoading } = useCompanyProfile();
     const { showToast } = useToast();
 
     const [form, setForm] = useState({
@@ -55,9 +54,6 @@ export default function Profile() {
         setLoading(true);
 
         try {
-            const updates: any = {};
-            const metaUpdates: any = {};
-
             // 1. Update Password if provided
             if (form.password) {
                 if (form.password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
